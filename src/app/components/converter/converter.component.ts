@@ -14,6 +14,13 @@ const DIRECTION = {
 
 type DirectionType = keyof typeof DIRECTION;
 
+function assertRate(rate: unknown): asserts rate is number {
+  if (typeof rate === 'number') {
+    return
+  }
+  throw new Error('Api error')
+}
+
 @Component({
     selector: 'converter',
     templateUrl: './converter.component.html',
@@ -52,18 +59,15 @@ export class ConverterComponent implements OnInit, OnDestroy {
     }
 
     convertCurrency(direction: DirectionType = DIRECTION.FORWARD) {
+      const rateFirstToUAH = this.rates[this.currencyFirst];
+      const rateSecondToUAH = this.rates[this.currencySecond];
+      assertRate(rateFirstToUAH);
+      assertRate(rateSecondToUAH);
+      
         if (direction === DIRECTION.FORWARD) {
-          const rateFirstToUAH = this.rates[this.currencyFirst];
-          const rateSecondToUAH = this.rates[this.currencySecond];
-          if (rateFirstToUAH && rateSecondToUAH) {
             this.amountSecond = this.roundToNearest(this.amountFirst * (rateFirstToUAH / rateSecondToUAH));
-          }
         } else {
-          const rateFirstToUAH = this.rates[this.currencyFirst];
-          const rateSecondToUAH = this.rates[this.currencySecond];
-          if (rateFirstToUAH && rateSecondToUAH) {
             this.amountFirst = this.roundToNearest(this.amountSecond * (rateSecondToUAH / rateFirstToUAH));
-          }
         }
       }
 
