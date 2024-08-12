@@ -1,0 +1,40 @@
+.main {
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+  padding: 16px 32px;
+  max-width: 1430px;
+  margin: 0 auto;
+}
+
+.wrapper {
+  padding: 16px 32px;
+  width: 100%;
+  max-width: calc(100% - 32px);
+  border: 2px solid rgba(215, 227, 255, 1);
+  border-radius: 20px;
+
+  & p {
+    color: #005cbb;
+    margin-bottom: 16px;
+  }
+}
+
+.input {
+  width: 100%;
+}
+
+.select {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .main {
+    grid-template-columns: 1fr 1fr;
+    padding: 24px 32px;
+  }
+
+  .wrapper {
+    max-width: initial;
+  }
+}

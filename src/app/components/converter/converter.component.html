@@ -1,0 +1,35 @@
+<main class="main">
+  <div class="wrapper">
+    <p>First currency</p>
+    <div>
+      <mat-form-field class="input">
+        <input matInput type="number" [(ngModel)]="amountFirst" (ngModelChange)="convertCurrency()"
+          placeholder="Amount">
+      </mat-form-field>
+      <mat-form-field class="select">
+        <mat-select [(ngModel)]="currencyFirst" (ngModelChange)="convertCurrency()" placeholder="Currency">
+          <mat-option *ngFor="let currency of getFilteredCurrencies(currencySecond)" [value]="currency">
+            {{ currency }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div class="wrapper">
+    <p>Second currency</p>
+    <div>
+      <mat-form-field class="input">
+        <input matInput type="number" [(ngModel)]="amountSecond" (ngModelChange)="convertCurrency('BACKWARD')"
+          placeholder="Amount">
+      </mat-form-field>
+      <mat-form-field class="select">
+        <mat-select [(ngModel)]="currencySecond" (ngModelChange)="convertCurrency('BACKWARD')" placeholder="Currency">
+          <mat-option *ngFor="let currency of getFilteredCurrencies(currencyFirst)" [value]="currency">
+            {{ currency }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+</main>
