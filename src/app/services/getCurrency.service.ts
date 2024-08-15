@@ -14,7 +14,7 @@ interface Rate {
 @Injectable({
     providedIn: 'root'
 })
-export class CurrencyService {
+export class GetCurrencyService {
     private apiUrl = 'https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json';
     private ratesSubject = new BehaviorSubject<Record<string, number>>({});
     private availableRates = ['USD', 'EUR', 'GBP'] 

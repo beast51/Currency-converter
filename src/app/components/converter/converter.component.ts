@@ -1,82 +1,113 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { CurrencyService } from '../../services/currency.service';
-import { Subscription } from 'rxjs/internal/Subscription';
-
-const DIRECTION = {
-  FORWARD: "FORWARD",
-  BACKWARD: "BACKWARD"
-} as const;
-
-type DirectionType = keyof typeof DIRECTION;
-
-function assertRate(rate: unknown): asserts rate is number {
-  if (typeof rate === 'number') {
-    return
-  }
-  throw new Error('Api error')
-}
+import { GetCurrencyService } from '@services/getCurrency.service';
+import { CurrencyConverterService, DIRECTION, DirectionType } from '@services/currencyConverter.service';
+import { InputComponent } from '@components/ui/input/input.component';
+import { SelectComponent } from '@components/ui/select/select.component';
 
 @Component({
-    selector: 'converter',
-    templateUrl: './converter.component.html',
-    styleUrls: ['./converter.component.scss'],
-    standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        MatFormFieldModule,
-        MatInputModule,
-        MatSelectModule,
-    ]
+  selector: 'converter',
+  templateUrl: './converter.component.html',
+  styleUrls: ['./converter.component.scss'],
+  standalone: true,
+  imports: [
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    ReactiveFormsModule,
+    InputComponent,
+    SelectComponent
+  ]
 })
 export class ConverterComponent implements OnInit, OnDestroy {
-    amountFirst = 1;
-    amountSecond = 0;
-    currencyFirst = 'USD';
-    currencySecond = 'UAH';
-    rates: Record<string, number> = {};
+  form!: FormGroup;
+  rates: Record<string, number> = {};
 
-    private ratesSubscription: Subscription|undefined = undefined;
+  private ratesSubscription?: Subscription;
 
-    constructor(private currencyService: CurrencyService) {}
+  constructor(
+    private currencyConverterService: CurrencyConverterService,
+    private getCurrencyService: GetCurrencyService,
+    private fb: FormBuilder) {
+  }
 
-    ngOnDestroy(): void {
-        if (this.ratesSubscription) {
-            this.ratesSubscription.unsubscribe();
-        }
+  ngOnInit(): void {
+    this.form = this.fb.group({
+      inputCurrencyFirst: [1],
+      inputCurrencySecond: [null],
+      selectCurrencyFirst: ['USD'],
+      selectCurrencySecond: ['UAH'],
+    });
+
+    this.ratesSubscription = this.getCurrencyService.rates$.subscribe(data => {
+      this.rates = data;
+      this.convertCurrency(DIRECTION.FORWARD); 
+    });
+
+    this.setupFormSubscriptions();
+  }
+
+  ngOnDestroy(): void {
+    if (this.ratesSubscription) {
+      this.ratesSubscription.unsubscribe();
     }
+  }
 
-    ngOnInit(): void {
-        this.ratesSubscription = this.currencyService.rates$.subscribe(data => {
-            this.rates = data;
-            this.convertCurrency(DIRECTION.FORWARD);
-        });
-    }
+  private setupFormSubscriptions(): void {
+    const controls = [
+      this.form.get('inputCurrencyFirst'),
+      this.form.get('inputCurrencySecond'),
+      this.form.get('selectCurrencyFirst'),
+      this.form.get('selectCurrencySecond')
+    ];
 
-    convertCurrency(direction: DirectionType = DIRECTION.FORWARD) {
-      const rateFirstToUAH = this.rates[this.currencyFirst];
-      const rateSecondToUAH = this.rates[this.currencySecond];
-      assertRate(rateFirstToUAH);
-      assertRate(rateSecondToUAH);
-      
-        if (direction === DIRECTION.FORWARD) {
-            this.amountSecond = this.roundToNearest(this.amountFirst * (rateFirstToUAH / rateSecondToUAH));
+    controls.forEach(control => {
+      control?.valueChanges.subscribe(() => {
+        if (
+          control === this.form.get('inputCurrencySecond') || 
+          control === this.form.get('selectCurrencySecond')
+        ) {
+          this.convertCurrency(DIRECTION.BACKWARD);
         } else {
-            this.amountFirst = this.roundToNearest(this.amountSecond * (rateSecondToUAH / rateFirstToUAH));
+          this.convertCurrency(DIRECTION.FORWARD);
         }
-      }
+      });
+    });
+  }
 
-    getFilteredCurrencies(excludeCurrency: string): string[] {
-      return Object.keys(this.rates).filter(currency => currency !== excludeCurrency);
-    }
+  private convertCurrency(direction: DirectionType): void {
+    const inputCurrencyFirst = this.form.get('inputCurrencyFirst')
+    const inputCurrencySecond = this.form.get('inputCurrencySecond')
+    const rateFrom = this.rates[this.form.get('selectCurrencyFirst')!.value];
+    const rateTo = this.rates[this.form.get('selectCurrencySecond')!.value];
+    const amount = this.form.get(direction === DIRECTION.FORWARD 
+      ? 'inputCurrencyFirst' 
+      : 'inputCurrencySecond'
+    )!.value
 
-    roundToNearest(value: number, step: number = 0.01): number {
-      const factor = 1 / step;
-      return Math.round(value * factor) / factor;
+    const conversionParams = {
+      amount, 
+      rateFrom, 
+      rateTo, 
+      direction 
     }
+      
+    const convertedValue = this.currencyConverterService.convert(conversionParams)
+
+    if (direction === DIRECTION.FORWARD) {
+      inputCurrencySecond?.setValue(convertedValue, { emitEvent: false });
+    } else {
+      inputCurrencyFirst?.setValue(convertedValue, { emitEvent: false });
+    }
+  }
+
+  getFilteredCurrencies(excludeCurrency: string): string[] {
+    return Object.keys(this.rates).filter(currency => currency !== excludeCurrency);
+  }
 }
